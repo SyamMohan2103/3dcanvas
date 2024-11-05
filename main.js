@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import WebGL from 'three/addons/capabilities/WebGL.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 
 // Add this before the loader
 let distance; // Declare distance variable in wider scope
@@ -30,7 +31,7 @@ scene.add(directionalLight);
 
 // Add after creating the scene and before the loader
 // Create grid helper
-const size = 30;
+const size = 100;
 const divisions = 20;
 const gridHelper = new THREE.GridHelper(size, divisions, 0x9370DB, 0x9370DB);
 scene.add(gridHelper);
@@ -55,6 +56,13 @@ renderer.shadowMap.enabled = true;
 // const material = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
 // const cube = new THREE.Mesh(geometry, material);
 // scene.add(cube);
+
+// Create orbit controls for zooming only
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.enableRotate = false; // Disable orbit rotation
+controls.enablePan = false;    // Disable panning
+controls.maxPolarAngle = Math.PI / 2; // Prevent going below ground
+controls.minPolarAngle = 0;    // Allow camera to go directly above
 
 // Create a group for the model that will rotate
 const modelGroup = new THREE.Group();
@@ -87,9 +95,15 @@ loader.load('/models/human/female Avatar.glb', (gltf) => {
     // Set up camera
     camera.position.set(0, distance * 0.2, distance * 1.1);
     camera.lookAt(0, sphere.radius / 2, 0);
+    
+    // Set control limits
+    controls.minDistance = distance * 0.5;
+    controls.maxDistance = distance * 2;
+    controls.target.set(0, sphere.radius / 2, 0);
+    controls.update();
 });
 
-// Add mouse controls outside of the loader
+// Add mouse controls for model rotation only
 let isDragging = false;
 let previousMousePosition = { x: 0, y: 0 };
 
@@ -120,20 +134,6 @@ document.addEventListener('mousemove', (e) => {
 document.addEventListener('mouseup', () => {
     isDragging = false;
 });
-
-// Add mouse wheel event for zoom
-document.addEventListener('wheel', (e) => {
-    e.preventDefault();
-    
-    const zoomSpeed = 0.1;
-    const minScale = 0.5;
-    const maxScale = 2;
-    
-    let scale = modelGroup.scale.x + (e.deltaY > 0 ? -zoomSpeed : zoomSpeed);
-    scale = Math.min(Math.max(scale, minScale), maxScale);
-    
-    modelGroup.scale.set(scale, scale, scale);
-}, { passive: false });
 
 function animate() {
 	renderer.render( scene, camera );
